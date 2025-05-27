@@ -13,6 +13,7 @@
 const uint8_t INVADER_SHAPE[] = {0x98, 0x5C, 0xB6, 0x5F, 0x5F, 0xB6, 0x5C, 0x98};
 const uint8_t CLEAR_INVADER_SHAPE[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 const uint8_t DEFENDER_SHAPE[] = {0xC0, 0xC0, 0xF0, 0x00, 0x00, 0xF0, 0xC0, 0xC0};
+const uint8_t CLEAR_DEFENDER_SHAPE[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 const uint8_t PROJECTILE_SHAPE[10][2] = {
     {0x80, 0x80},
     {0xC0, 0xC0},
@@ -25,6 +26,7 @@ const uint8_t PROJECTILE_SHAPE[10][2] = {
     {0x01, 0x01},
     {0x00, 0x00}
 };
+const uint8_t CLEAR_PROJECTILE_SHAPE[] = {0x00, 0x00};
 
 typedef uint8_t* shape_t;
 
@@ -54,6 +56,8 @@ typedef struct {
     unsigned game_over : 1;
     unsigned update_invaders : 1;
     unsigned update_projectile : 1;
+    unsigned move_left : 1;
+    unsigned move_right : 1;
 } objects_flags_t;
 
 extern object_t defender;
@@ -65,6 +69,7 @@ void print_object(shape_t shape, tuple_t size, tuple_t position);
 void print_invaders(object_t* invaders);
 void update_invaders(object_t* invaders);
 void init_invaders(object_t* invaders);
+uint8_t check_for_hit(projectile_t* projectile, object_t* invader);
 
 #endif	/* OBJECTS_H */
 

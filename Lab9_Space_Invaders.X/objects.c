@@ -132,3 +132,16 @@ void update_invaders(object_t* invaders) {
 void init_invaders(object_t* invaders){
     memcpy(invaders, initial_invaders, sizeof(initial_invaders));
 }
+
+#define invader_is_active(invader) invader->position.y < 41
+uint8_t check_for_hit(projectile_t* projectile, object_t* invader){
+    if(invader->position.y > 41){
+        Nop();
+        return 0;
+    }
+    
+    uint8_t vertical_hit = projectile->position.x >= invader->position.x - invader->size.x/2 &&
+                            projectile->position.x <= invader->position.x + invader->size.x/2;
+    uint8_t horizontal_hit = projectile->position.y <= invader->position.y + invader->size.x/2;
+    return horizontal_hit && vertical_hit;
+}

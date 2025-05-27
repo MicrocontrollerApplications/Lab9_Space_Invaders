@@ -22,10 +22,6 @@ void main(void) {
     print_invaders(invaders);
     projectile.position = defender.position;
     while (1) {
-        if (PORTBbits.RB1 == 0) {
-            while (PORTBbits.RB1 == 0);
-            projectile.active = 1;
-        }
         if (flags.update_projectile && projectile.active) {
             flags.update_projectile = 0;
             static uint8_t projectile_idx = 0;
@@ -44,7 +40,7 @@ void main(void) {
                 });
                 projectile_idx = 1;
                 projectile.position.y -= 8;
-                if (projectile.position.y < 16) {
+                if (projectile.position.y < 8) {
                     projectile.active = 0;
                 }
             }
@@ -52,8 +48,37 @@ void main(void) {
             ++projectile_idx;
 
             // collision check
+            for (uint8_t i = num_invaders; i >= 1; --i){
+                if(invaders[i-1].lives == 0)
+                    continue;
+                
+                if(check_for_hit(&projectile, &invaders[i-1])){
+                    --invaders[i-1].lives;
+                    print_object(CLEAR_PROJECTILE_SHAPE, projectile.size, projectile.position);
+                    print_object(CLEAR_INVADER_SHAPE, invaders[i-1].size, invaders[i-1].position);
+                    projectile.active = 0;
+                    break;
+                }
+            }
         }
 
+        if(flags.move_left){
+            flags.move_left = 0;
+            if(defender.position.x > defender.size.x / 2){
+                print_object(CLEAR_DEFENDER_SHAPE, defender.size, defender.position);
+                --defender.position.x;
+                print_object(defender.shape, defender.size, defender.position);
+            }            
+        }
+        
+        if(flags.move_right){
+            flags.move_right = 0;
+            if(defender.position.x < GLCD_MAXCOL - defender.size.x / 2){
+                print_object(CLEAR_DEFENDER_SHAPE, defender.size, defender.position);
+                ++defender.position.x;
+                print_object(defender.shape, defender.size, defender.position);
+            }            
+        }
 
         if (flags.update_invaders) {
             flags.update_invaders = 0;
@@ -70,7 +95,6 @@ void main(void) {
             flags.game_over = 0;
         }
 
-        // print_object(defender.shape, defender.size, defender.position);
     }
 
     return;
@@ -82,7 +106,9 @@ void __init(void) {
 
     ANSELB = 0;
     TRISBbits.TRISB2 = 1;
-    TRISBbits.TRISB1 = 1;
+    
+    ANSELAbits.ANSA2 = 0;
+    TRISAbits.TRISA2 = 1;
 
     T1CONbits.TMR1CS = 0; // Fosc / 4
     T1CONbits.T1CKPS = 0b11; // PS = 1:8
@@ -93,6 +119,10 @@ void __init(void) {
     INTCON2bits.INTEDG2 = 0; // RB2 Interrupt on falling edge
     INTCON3bits.INT2IF = 0;
     INTCON3bits.INT2IE = 1;
+    
+    INTCON2bits.INTEDG0 = 0; // RB2 Interrupt on falling edge
+    INTCONbits.INT0IF = 0;
+    INTCONbits.INT0IE = 1;
 
     PIE1bits.TMR1IE = 1;
     INTCONbits.GIE = 1;
@@ -107,6 +137,17 @@ void __interrupt(high_priority) __isr(void) {
             projectile.position = defender.position;
         }
 
+        return;
+    }
+    
+    if(INTCONbits.INT0IF && INTCONbits.INT0IE){
+        INTCONbits.INT0IF = 0;
+        if(0 == PORTAbits.RA2){
+            flags.move_left = 1;
+        }else{
+            flags.move_right = 1;
+        }
+        
         return;
     }
 
