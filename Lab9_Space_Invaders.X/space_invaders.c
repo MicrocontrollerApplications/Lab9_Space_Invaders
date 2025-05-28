@@ -5,7 +5,7 @@
  * Created on May 27, 2025, 11:20 AM
  */
 
-#include "objects.h"
+#include "space_invaders.h"
 #include <string.h>
 
 #include <GLCDnokia.h>

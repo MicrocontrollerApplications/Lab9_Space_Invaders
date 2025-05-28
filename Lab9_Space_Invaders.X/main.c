@@ -7,7 +7,7 @@
 
 
 #include <xc.h>
-#include <objects.h>
+#include <space_invaders.h>
 #include <GLCDnokia.h>
 
 void __init(void);
