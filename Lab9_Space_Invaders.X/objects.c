@@ -17,6 +17,9 @@ object_t defender = {.shape = DEFENDER_SHAPE, .position =
     {42, 40}, .lives = 3, .size =
     {8, 8}};
 
+projectile_t projectile = {.size =
+    {2, 2}};
+
 const object_t const initial_invaders[] = {
     {.shape = INVADER_SHAPE, .position =
         {4, 248}, .lives = 1, .size =
@@ -79,8 +82,7 @@ void print_object(shape_t shape, tuple_t size, tuple_t position) {
 
 #define print_invader(invader) print_object(invader->shape, invader->size, invader->position)
 
-void print_invaders(object_t* invaders) {
-    object_t invader;
+void print_invaders() {
     for (uint8_t i = 0; i < num_invaders; ++i) {
         if ((invaders + i)->lives)
             print_invader((invaders + i));
@@ -96,7 +98,7 @@ void update_invaders() {
         return;
     }
     flags.update_invaders = 0;
-    
+
     // clear invader's rows, to print new ones
     for (uint8_t i = 0; i < GLCD_MAXROW; ++i) {
         GLCD_ClearRow(i);
@@ -138,6 +140,7 @@ void update_invaders() {
 
 void init_invaders() {
     memcpy(invaders, initial_invaders, sizeof (initial_invaders));
+    hit_count = 0;
 }
 
 #define invader_is_active(invader) invader->position.y < 41
@@ -159,53 +162,119 @@ uint8_t check_for_hit(projectile_t* projectile, object_t* invader) {
 #define clear_invader(invader) print_object(CLEAR_INVADER_SHAPE, invader->size, invader->position)
 
 void process_collision(projectile_t* projectile, object_t* invader) {
-    --invader->lives;
+    if(0 == --invader->lives){
+        flags.hit = 1;
+    }
     clear_projectile(projectile);
     clear_invader(invader);
     projectile->active = 0;
 }
 
-void update_projectile(projectile_t* projectile) {
+void update_projectile() {
     static uint8_t projectile_idx = 0;
-    print_object(PROJECTILE_SHAPE[projectile_idx], projectile->size, projectile->position);
+    if (!flags.update_projectile) {
+        return;
+    }
+    flags.update_projectile = 0;
+
+    if (!projectile.active) {
+        return;
+    }
+
+    print_object(PROJECTILE_SHAPE[projectile_idx], projectile.size, projectile.position);
 
     // projectile spanning two rows of the display?
     if (projectile_idx > 0 && projectile_idx % 8 == 0) {
 
-        print_object(PROJECTILE_SHAPE[0], projectile->size, (tuple_t) {
-            projectile->position.x, projectile->position.y - 8
+        print_object(PROJECTILE_SHAPE[0], projectile.size, (tuple_t) {
+            projectile.position.x, projectile.position.y - 8
         });
     }
 
     // projectile changed to new display row?
     if (projectile_idx > 0 && projectile_idx % 9 == 0) {
-        projectile->position.y -= 8;
-        print_object(PROJECTILE_SHAPE[1], projectile->size, projectile->position);
+        projectile.position.y -= 8;
+        print_object(PROJECTILE_SHAPE[1], projectile.size, projectile.position);
         projectile_idx = 1;
-        if (projectile->position.y < 8) {
-            projectile->active = 0;
+        if (projectile.position.y < 8) {
+            projectile.active = 0;
         }
     }
 
     ++projectile_idx;
+
+    // collision check
+    for (uint8_t i = num_invaders; i >= 1; --i) {
+        if (invaders[i - 1].lives == 0)
+            continue;
+
+        if (check_for_hit(&projectile, &invaders[i - 1])) {
+            process_collision(&projectile, &invaders[i - 1]);
+            break;
+        }
+    }
 }
 
-void update_defender(){
+void update_defender() {
     if (flags.move_left) {
-            flags.move_left = 0;
-            if (defender.position.x > defender.size.x / 2) {
-                print_object(CLEAR_DEFENDER_SHAPE, defender.size, defender.position);
-                --defender.position.x;
-                print_object(defender.shape, defender.size, defender.position);
-            }
+        flags.move_left = 0;
+        if (defender.position.x > defender.size.x / 2) {
+            print_object(CLEAR_DEFENDER_SHAPE, defender.size, defender.position);
+            --defender.position.x;
+            print_object(defender.shape, defender.size, defender.position);
         }
+    }
 
-        if (flags.move_right) {
-            flags.move_right = 0;
-            if (defender.position.x < GLCD_MAXCOL - defender.size.x / 2) {
-                print_object(CLEAR_DEFENDER_SHAPE, defender.size, defender.position);
-                ++defender.position.x;
-                print_object(defender.shape, defender.size, defender.position);
-            }
+    if (flags.move_right) {
+        flags.move_right = 0;
+        if (defender.position.x < GLCD_MAXCOL - defender.size.x / 2) {
+            print_object(CLEAR_DEFENDER_SHAPE, defender.size, defender.position);
+            ++defender.position.x;
+            print_object(defender.shape, defender.size, defender.position);
         }
+    }
+}
+
+typedef union {
+    struct {
+        unsigned unused                 :3;
+        unsigned LIVE_BAR               :3;
+        unsigned unused2                :2;
+    };
+} LIVE_BAR_t;
+extern volatile LIVE_BAR_t live_bar __at(0xF8A);
+
+const uint8_t live_counter[3] = {0b111, 0b110, 0b100, 0b000};
+
+void check_game_status() {
+    if (flags.game_over) {
+        --defender.lives;
+        live_bar.LIVE_BAR = live_counter[defender.lives];
+        if (defender.lives == 0) {
+            GLCD_Text2Out(0, 3, "GAME");
+            GLCD_Text2Out(1, 3, "OVER");
+            while (1);
+        }
+        flags.game_over = 0;
+    }
+
+    if (flags.hit) {
+        ++hit_count;
+        flags.hit = 0;
+    }
+    
+    if(hit_count >= num_invaders){
+        GLCD_Text2Out(0, 4, "YOU");
+        GLCD_Text2Out(1, 4, "WON");
+        while (1);
+    }
+}
+
+void init_space_invaders(){
+    init_invaders();
+    print_invaders();
+    print_defender();
+    
+    TRISB &= 0b11000111;
+    live_bar.LIVE_BAR = live_counter[defender.lives];
 }

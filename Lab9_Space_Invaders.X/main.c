@@ -12,47 +12,16 @@
 
 void __init(void);
 
-
-projectile_t projectile = {.size =
-    {2, 2}};
-
 void main(void) {
     __init();
-
-    init_invaders();
-    print_invaders(invaders);
-    print_defender(defender);
-
+    
+    init_space_invaders();
+    
     while (1) {
-        if (flags.update_projectile && projectile.active) {
-            flags.update_projectile = 0;
-            update_projectile(&projectile);
-
-            // collision check
-            for (uint8_t i = num_invaders; i >= 1; --i) {
-                if (invaders[i - 1].lives == 0)
-                    continue;
-
-                if (check_for_hit(&projectile, &invaders[i - 1])) {
-                    process_collision(&projectile, &invaders[i - 1]);
-                    break;
-                }
-            }
-        }
-
         update_defender();
         update_invaders();
-
-        if (flags.game_over) {
-            --defender.lives;
-            if (defender.lives == 0) {
-                GLCD_Text2Out(0, 3, "GAME");
-                GLCD_Text2Out(1, 3, "OVER");
-                while (1);
-            }
-            flags.game_over = 0;
-        }
-
+        update_projectile();
+        check_game_status();
     }
 
     return;
@@ -115,15 +84,13 @@ void __interrupt(high_priority) __isr(void) {
     if (PIR1bits.TMR1IF && PIE1bits.TMR1IE) {
         static uint8_t counter = 0;
         PIR1bits.TMR1IF = 0;
-        if (15 == counter) {
+        if (5 == counter) {
             flags.update_invaders = 1;
             counter = 0;
         }
 
         flags.update_projectile = 1;
-
         ++counter;
-
         return;
     }
 
