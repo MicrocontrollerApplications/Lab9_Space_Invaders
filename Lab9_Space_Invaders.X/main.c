@@ -38,7 +38,7 @@ void __init(void) {
     TRISAbits.TRISA2 = 1;
 
     T1CONbits.TMR1CS = 0; // Fosc / 4
-    T1CONbits.T1CKPS = 0b11; // PS = 1:8
+    T1CONbits.T1CKPS = 0b10; // PS = 1:8
     T1CONbits.T1RD16 = 1;
     PIR1bits.TMR1IF = 0;
     T1CONbits.TMR1ON = 1;
@@ -84,7 +84,7 @@ void __interrupt(high_priority) __isr(void) {
     if (PIR1bits.TMR1IF && PIE1bits.TMR1IE) {
         static uint8_t counter = 0;
         PIR1bits.TMR1IF = 0;
-        if (5 == counter) {
+        if (10 == counter) {
             flags.update_invaders = 1;
             counter = 0;
         }
