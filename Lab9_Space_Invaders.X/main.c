@@ -12,78 +12,36 @@
 
 void __init(void);
 
-object_t invaders[num_invaders];
-projectile_t projectile = {.size = {2, 2}};
+
+projectile_t projectile = {.size =
+    {2, 2}};
 
 void main(void) {
     __init();
-    init_invaders(invaders);
-    print_object(defender.shape, defender.size, defender.position);
+
+    init_invaders();
     print_invaders(invaders);
-    projectile.position = defender.position;
+    print_defender(defender);
+
     while (1) {
         if (flags.update_projectile && projectile.active) {
             flags.update_projectile = 0;
-            static uint8_t projectile_idx = 0;
-            static tuple_t prev_pos;
-            print_object(PROJECTILE_SHAPE[projectile_idx], projectile.size, projectile.position);
-            if (projectile_idx > 0 && projectile_idx % 8 == 0) {
-
-                print_object(PROJECTILE_SHAPE[0], projectile.size, (tuple_t) {
-                    projectile.position.x, projectile.position.y - 8
-                });
-            }
-            if (projectile_idx > 0 && projectile_idx % 9 == 0) {
-
-                print_object(PROJECTILE_SHAPE[1], projectile.size, (tuple_t) {
-                    projectile.position.x, projectile.position.y - 8
-                });
-                projectile_idx = 1;
-                projectile.position.y -= 8;
-                if (projectile.position.y < 8) {
-                    projectile.active = 0;
-                }
-            }
-
-            ++projectile_idx;
+            update_projectile(&projectile);
 
             // collision check
-            for (uint8_t i = num_invaders; i >= 1; --i){
-                if(invaders[i-1].lives == 0)
+            for (uint8_t i = num_invaders; i >= 1; --i) {
+                if (invaders[i - 1].lives == 0)
                     continue;
-                
-                if(check_for_hit(&projectile, &invaders[i-1])){
-                    --invaders[i-1].lives;
-                    print_object(CLEAR_PROJECTILE_SHAPE, projectile.size, projectile.position);
-                    print_object(CLEAR_INVADER_SHAPE, invaders[i-1].size, invaders[i-1].position);
-                    projectile.active = 0;
+
+                if (check_for_hit(&projectile, &invaders[i - 1])) {
+                    process_collision(&projectile, &invaders[i - 1]);
                     break;
                 }
             }
         }
 
-        if(flags.move_left){
-            flags.move_left = 0;
-            if(defender.position.x > defender.size.x / 2){
-                print_object(CLEAR_DEFENDER_SHAPE, defender.size, defender.position);
-                --defender.position.x;
-                print_object(defender.shape, defender.size, defender.position);
-            }            
-        }
-        
-        if(flags.move_right){
-            flags.move_right = 0;
-            if(defender.position.x < GLCD_MAXCOL - defender.size.x / 2){
-                print_object(CLEAR_DEFENDER_SHAPE, defender.size, defender.position);
-                ++defender.position.x;
-                print_object(defender.shape, defender.size, defender.position);
-            }            
-        }
-
-        if (flags.update_invaders) {
-            flags.update_invaders = 0;
-            update_invaders(invaders);
-        }
+        update_defender();
+        update_invaders();
 
         if (flags.game_over) {
             --defender.lives;
@@ -106,7 +64,7 @@ void __init(void) {
 
     ANSELB = 0;
     TRISBbits.TRISB2 = 1;
-    
+
     ANSELAbits.ANSA2 = 0;
     TRISAbits.TRISA2 = 1;
 
@@ -119,7 +77,7 @@ void __init(void) {
     INTCON2bits.INTEDG2 = 0; // RB2 Interrupt on falling edge
     INTCON3bits.INT2IF = 0;
     INTCON3bits.INT2IE = 1;
-    
+
     INTCON2bits.INTEDG0 = 0; // RB2 Interrupt on falling edge
     INTCONbits.INT0IF = 0;
     INTCONbits.INT0IE = 1;
@@ -130,6 +88,7 @@ void __init(void) {
 }
 
 void __interrupt(high_priority) __isr(void) {
+    // interrupt for TL to trigger a shot
     if (INTCON3bits.INT2IF && INTCON3bits.INT2IE) {
         INTCON3bits.INT2F = 0;
         if (!projectile.active) {
@@ -139,18 +98,20 @@ void __interrupt(high_priority) __isr(void) {
 
         return;
     }
-    
-    if(INTCONbits.INT0IF && INTCONbits.INT0IE){
+
+    // interrupt for rotary encoder
+    if (INTCONbits.INT0IF && INTCONbits.INT0IE) {
         INTCONbits.INT0IF = 0;
-        if(0 == PORTAbits.RA2){
+        if (0 == PORTAbits.RA2) {
             flags.move_left = 1;
-        }else{
+        } else {
             flags.move_right = 1;
         }
-        
+
         return;
     }
 
+    // global timer to schedule invader's and projectile's updates
     if (PIR1bits.TMR1IF && PIE1bits.TMR1IE) {
         static uint8_t counter = 0;
         PIR1bits.TMR1IF = 0;

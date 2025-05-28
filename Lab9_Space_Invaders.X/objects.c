@@ -77,51 +77,58 @@ void print_object(shape_t shape, tuple_t size, tuple_t position) {
     }
 }
 
+#define print_invader(invader) print_object(invader->shape, invader->size, invader->position)
+
 void print_invaders(object_t* invaders) {
     object_t invader;
     for (uint8_t i = 0; i < num_invaders; ++i) {
-        invader = *(invaders + i);
-        if (invader.lives)
-            print_object(invader.shape, invader.size, invader.position);
+        if ((invaders + i)->lives)
+            print_invader((invaders + i));
     }
 }
 
 #define check_border_left(invader) invader->position.x <= invader->size.x / 2
 #define check_border_right(invader) invader->position.x + invader->size.x / 2 > GLCD_MAXCOL
 #define clear_invader(invader) print_object(CLEAR_INVADER_SHAPE, invader->size, invader->position)
-#define print_invader(invader) print_object(invader->shape, invader->size, invader->position)
 
-void update_invaders(object_t* invaders) {
+void update_invaders() {
+    if (!flags.update_invaders) {
+        return;
+    }
+    flags.update_invaders = 0;
+    
     // clear invader's rows, to print new ones
-    for (uint8_t i = 0; i < GLCD_MAXROW; ++i){
+    for (uint8_t i = 0; i < GLCD_MAXROW; ++i) {
         GLCD_ClearRow(i);
     }
-    
+
     for (uint8_t i = 0; i < num_invaders; ++i) {
         if ((invaders + i)->lives == 0)
             continue;
 
         // clear_invader((invaders+i));
         (invaders + i)->position.x += flags.invaders_move_right ? 1 : -1;
-        print_invader((invaders+i));
+        print_invader((invaders + i));
 
         if (check_border_left((invaders + i)) || check_border_right((invaders + i))) {
             flags.switch_motion = 1;
         }
     }
 
+    // change direction of movement
     if (flags.switch_motion) {
         flags.switch_motion = 0;
         flags.invaders_move_right ^= 1;
+        // if this is the second change of direction go one row down
         if (flags.invaders_move_right) {
             for (uint8_t i = num_invaders; i > 0; --i) {
                 if ((invaders + i - 1)->lives == 0)
                     continue;
-                
+
                 (invaders + i - 1)->position.y += 8;
-                if((invaders + i - 1)->position.y / 8 == GLCD_MAXROW){
+                if ((invaders + i - 1)->position.y / 8 == GLCD_MAXROW) {
                     flags.game_over = 1;
-                    init_invaders(invaders);
+                    init_invaders();
                     break;
                 }
             }
@@ -129,19 +136,76 @@ void update_invaders(object_t* invaders) {
     }
 }
 
-void init_invaders(object_t* invaders){
-    memcpy(invaders, initial_invaders, sizeof(initial_invaders));
+void init_invaders() {
+    memcpy(invaders, initial_invaders, sizeof (initial_invaders));
 }
 
 #define invader_is_active(invader) invader->position.y < 41
-uint8_t check_for_hit(projectile_t* projectile, object_t* invader){
-    if(invader->position.y > 41){
+
+uint8_t check_for_hit(projectile_t* projectile, object_t* invader) {
+    // skip currently not printed invaders (workaround...)
+    if (invader->position.y > 41) {
         Nop();
         return 0;
     }
-    
-    uint8_t vertical_hit = projectile->position.x >= invader->position.x - invader->size.x/2 &&
-                            projectile->position.x <= invader->position.x + invader->size.x/2;
-    uint8_t horizontal_hit = projectile->position.y <= invader->position.y + invader->size.x/2;
+
+    uint8_t vertical_hit = projectile->position.x >= invader->position.x - invader->size.x / 2 &&
+            projectile->position.x <= invader->position.x + invader->size.x / 2;
+    uint8_t horizontal_hit = projectile->position.y <= invader->position.y + invader->size.x / 2;
     return horizontal_hit && vertical_hit;
+}
+
+#define clear_projectile(projectile) print_object(CLEAR_PROJECTILE_SHAPE, projectile->size, projectile->position)
+#define clear_invader(invader) print_object(CLEAR_INVADER_SHAPE, invader->size, invader->position)
+
+void process_collision(projectile_t* projectile, object_t* invader) {
+    --invader->lives;
+    clear_projectile(projectile);
+    clear_invader(invader);
+    projectile->active = 0;
+}
+
+void update_projectile(projectile_t* projectile) {
+    static uint8_t projectile_idx = 0;
+    print_object(PROJECTILE_SHAPE[projectile_idx], projectile->size, projectile->position);
+
+    // projectile spanning two rows of the display?
+    if (projectile_idx > 0 && projectile_idx % 8 == 0) {
+
+        print_object(PROJECTILE_SHAPE[0], projectile->size, (tuple_t) {
+            projectile->position.x, projectile->position.y - 8
+        });
+    }
+
+    // projectile changed to new display row?
+    if (projectile_idx > 0 && projectile_idx % 9 == 0) {
+        projectile->position.y -= 8;
+        print_object(PROJECTILE_SHAPE[1], projectile->size, projectile->position);
+        projectile_idx = 1;
+        if (projectile->position.y < 8) {
+            projectile->active = 0;
+        }
+    }
+
+    ++projectile_idx;
+}
+
+void update_defender(){
+    if (flags.move_left) {
+            flags.move_left = 0;
+            if (defender.position.x > defender.size.x / 2) {
+                print_object(CLEAR_DEFENDER_SHAPE, defender.size, defender.position);
+                --defender.position.x;
+                print_object(defender.shape, defender.size, defender.position);
+            }
+        }
+
+        if (flags.move_right) {
+            flags.move_right = 0;
+            if (defender.position.x < GLCD_MAXCOL - defender.size.x / 2) {
+                print_object(CLEAR_DEFENDER_SHAPE, defender.size, defender.position);
+                ++defender.position.x;
+                print_object(defender.shape, defender.size, defender.position);
+            }
+        }
 }

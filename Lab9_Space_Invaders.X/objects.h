@@ -10,6 +10,10 @@
 
 #include <xc.h>
 
+#define num_invaders 15
+
+#define print_defender(defender) print_object(defender.shape, defender.size, defender.position)
+
 const uint8_t INVADER_SHAPE[] = {0x98, 0x5C, 0xB6, 0x5F, 0x5F, 0xB6, 0x5C, 0x98};
 const uint8_t CLEAR_INVADER_SHAPE[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 const uint8_t DEFENDER_SHAPE[] = {0xC0, 0xC0, 0xF0, 0x00, 0x00, 0xF0, 0xC0, 0xC0};
@@ -61,15 +65,19 @@ typedef struct {
 } objects_flags_t;
 
 extern object_t defender;
-// extern object_t invaders[];
-#define num_invaders 15
+
 extern objects_flags_t flags;
 
 void print_object(shape_t shape, tuple_t size, tuple_t position);
 void print_invaders(object_t* invaders);
-void update_invaders(object_t* invaders);
-void init_invaders(object_t* invaders);
+void update_invaders();
 uint8_t check_for_hit(projectile_t* projectile, object_t* invader);
+void process_collision(projectile_t* projectile, object_t* invader);
+void init_invaders();
+void update_projectile(projectile_t* projectile);
+void update_defender();
+
+object_t invaders[num_invaders];
 
 #endif	/* OBJECTS_H */
 
