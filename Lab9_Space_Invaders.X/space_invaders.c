@@ -244,7 +244,7 @@ typedef union {
 } LIVE_BAR_t;
 extern volatile LIVE_BAR_t live_bar __at(0xF8A);
 
-const uint8_t live_counter[3] = {0b111, 0b110, 0b100, 0b000};
+const uint8_t live_counter[3] = {0b111, 0b011, 0b001, 0b000};
 
 void check_game_status() {
     if (flags.game_over) {
