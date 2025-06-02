@@ -1,0 +1,10 @@
+Lab9_Space_Invaders.X/debug/
+Lab9_Space_Invaders.X/build/
+Lab9_Space_Invaders.X/dist/
+Lab9_Space_Invaders.X/nbproject/*
+!Lab9_Space_Invaders.X/nbproject/configurations.xml
+!Lab9_Space_Invaders.X/nbproject/project.xml
+
+*.log*
+/Lab9_Space_Invaders.X/build/
+/Lab9_Space_Invaders.X/dist/
