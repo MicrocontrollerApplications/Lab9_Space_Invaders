@@ -31,8 +31,7 @@ void __init(void) {
     OSCCONbits.IRCF = 0b111; // Fosc = 16MHz
     GLCD_Init();
 
-    ANSELB = 0;
-    TRISBbits.TRISB2 = 1;
+    // configure pin for Button TL as input
 
     ANSELAbits.ANSA2 = 0;
     TRISAbits.TRISA2 = 1;
@@ -47,7 +46,7 @@ void __init(void) {
     INTCON3bits.INT2IF = 0;
     INTCON3bits.INT2IE = 1;
 
-    INTCON2bits.INTEDG0 = 0; // RB2 Interrupt on falling edge
+    INTCON2bits.INTEDG0 = 0; // RB0 Interrupt on falling edge
     INTCONbits.INT0IF = 0;
     INTCONbits.INT0IE = 1;
 
@@ -57,11 +56,12 @@ void __init(void) {
 }
 
 void __interrupt(high_priority) __isr(void) {
-    // interrupt for TL to trigger a shot
-    if (INTCON3bits.INT2IF && INTCON3bits.INT2IE) {
-        INTCON3bits.INT2F = 0;
+    // catch and process interrupt for TL to trigger a shot
+    if ( /*...*/ ) {
+        
         if (!projectile.active) {
-            projectile.active = 1;
+            // enable projectile
+            // projectile.active = ; 
             projectile.position = defender.position;
         }
 
@@ -69,15 +69,8 @@ void __interrupt(high_priority) __isr(void) {
     }
 
     // interrupt for rotary encoder
-    if (INTCONbits.INT0IF && INTCONbits.INT0IE) {
-        INTCONbits.INT0IF = 0;
-        if (0 == PORTAbits.RA2) {
-            flags.move_left = 1;
-        } else {
-            flags.move_right = 1;
-        }
-
-        return;
+    if( /*...*/ ) {
+        
     }
 
     // global timer to schedule invader's and projectile's updates
