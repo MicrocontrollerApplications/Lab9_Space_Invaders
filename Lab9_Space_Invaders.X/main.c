@@ -31,24 +31,26 @@ void __init(void) {
     OSCCONbits.IRCF = 0b111; // Fosc = 16MHz
     GLCD_Init();
 
-    // configure pin for Button TL as input
-
-    ANSELAbits.ANSA2 = 0;
-    TRISAbits.TRISA2 = 1;
-
+    // configure pins for rotary encoder as digital inputs
+    
+    // configure pin for Button TL as digital input
+    
+    
     T1CONbits.TMR1CS = 0; // Fosc / 4
     T1CONbits.T1CKPS = 0b10; // PS = 1:8
     T1CONbits.T1RD16 = 1;
     PIR1bits.TMR1IF = 0;
     T1CONbits.TMR1ON = 1;
 
-    INTCON2bits.INTEDG2 = 0; // RB2 Interrupt on falling edge
-    INTCON3bits.INT2IF = 0;
-    INTCON3bits.INT2IE = 1;
+    // configure Interrupt on falling edge for RB2 
 
-    INTCON2bits.INTEDG0 = 0; // RB0 Interrupt on falling edge
-    INTCONbits.INT0IF = 0;
-    INTCONbits.INT0IE = 1;
+    
+    
+    
+    // configure Interrupt on falling edge for RB0 
+    
+    
+    
 
     PIE1bits.TMR1IE = 1;
     INTCONbits.GIE = 1;

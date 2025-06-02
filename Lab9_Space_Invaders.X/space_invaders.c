@@ -275,6 +275,8 @@ void init_space_invaders(){
     print_invaders();
     print_defender();
     
+    // configure pins for LEDs as output
     TRISB &= 0b11000111;
+    // set initial three lives to be shown via LEDs
     live_bar.LIVE_BAR = live_counter[defender.lives];
 }
